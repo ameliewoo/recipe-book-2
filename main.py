@@ -2,6 +2,8 @@ import os
 import random
 import pickle
 
+# Recipe class to hold individual recipe details
+# It is a private class that is only used within this file - encapsulation
 class Recipe:
     def __init__(self, title, ingredients, cooking_time, method, servings, meal, dietary_tags, filename=None):
         self.title = title.strip()
@@ -12,7 +14,8 @@ class Recipe:
         self.meal = meal.strip()
         self.dietary_tags = [t.strip() for t in dietary_tags if t and t.strip()]
         self.filename = filename
-
+# loads recipe from a text file
+# takes inputs of cls and path
     @classmethod
     def from_file(cls, path):
         with open(path, 'r', encoding='utf-8') as f:
@@ -40,7 +43,10 @@ class Recipe:
                 dietary_tags = [t.strip() for t in line[len("Dietary tags:"):].split(",") if t.strip()]
 
         return cls(title, ingredients, cooking_time, method, servings, meal, dietary_tags, filename=os.path.basename(path))
-
+# Matches -  checks if recipe matches search criteria
+#self - the instance of the Recipe class
+#criteria - the field to search by (title, ingredients, etc.)
+#query - the search term or terms
     def matches(self, criteria, query):
         if isinstance(query, str):
             query = query.strip().lower()
@@ -72,9 +78,8 @@ class RecipeBook:
         self.pickle_path = os.path.join(self.folder, pickle_file)
         os.makedirs(self.folder, exist_ok=True)
         self.recipes = self._load_recipes()
-
+# loads recipes from pickle file or text files if pcikles files are unavailable
     def _load_recipes(self):
-        # pickle! 
         if os.path.exists(self.pickle_path):
             try:
                 with open(self.pickle_path, 'rb') as f:
@@ -83,7 +88,6 @@ class RecipeBook:
             except Exception as e:
                 print("Failed to load pickle file, loading from .txt instead:", e)
 
-        # if pickle doesn't work - use the .txt files i already have
         recipes = []
         for fname in os.listdir(self.folder):
             path = os.path.join(self.folder, fname)
@@ -93,12 +97,12 @@ class RecipeBook:
                 except Exception as e:
                     print(f"Error loading {fname}: {e}")
         return recipes
-
+# saves recipes to a pickle file
     def _save_to_pickle(self):
         with open(self.pickle_path, 'wb') as f:
             pickle.dump(self.recipes, f)
         print("Recipes saved to pickle file.")
-
+# adds a new recipe to the collection
     def add_recipe(self, recipe):
         file_path = os.path.join(self.folder, f"{recipe.title}.txt")
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -107,7 +111,7 @@ class RecipeBook:
         # update pickle
         self.recipes.append(recipe)
         self._save_to_pickle()
-
+# searches for recipes based on criteria and query
     def search(self, criteria, query, return_first=False):
         if criteria == 'ingredients' and isinstance(query, str):
             query = [i.strip() for i in query.split(',') if i.strip()]
@@ -119,19 +123,39 @@ class RecipeBook:
 
     def get_random_recipe(self):
         return random.choice(self.recipes) if self.recipes else None
-
+# deletes a recipe from the collection by title
+    def delete_recipe(self, title):
+        title = title.strip().lower()
+        recipe_to_delete = None
+        for recipe in self.recipes:
+            if recipe.title.lower() == title:
+                recipe_to_delete = recipe
+                break
+        
+        if recipe_to_delete:
+            self.recipes.remove(recipe_to_delete)
+            # delete the text file
+            if recipe_to_delete.filename:
+                file_path = os.path.join(self.folder, recipe_to_delete.filename)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            # update pickle
+            self._save_to_pickle()
+            return True
+        return False
+# Main application class to run the recipe book program
 class RecipeApp:
     def __init__(self):
         self.book = RecipeBook()
 
-    def run(self): #3/11 - implemented a loop so it runs util the user wants to exit 
+    def run(self):
         keep_running = True
         while keep_running:
             print('*' * 30)
             print("Welcome to the Recipe Book")
             print('*' * 30)
 
-            choice = input("Are you:\n\tSearching for a recipe? - enter 1\n\tCreating a new recipe? - enter 2\n")
+            choice = input("Are you:\n\tSearching for a recipe? - enter 1\n\tCreating a new recipe? - enter 2\n\tDeleting a recipe? - enter 3\n")
             try:
                 choice = int(choice)
             except ValueError:
@@ -142,6 +166,8 @@ class RecipeApp:
                 self.search_menu()
             elif choice == 2:
                 self.create_recipe()
+            elif choice == 3:
+                self.delete_recipe_menu()
             else:
                 print("Invalid option, please try again")
 
@@ -151,7 +177,7 @@ class RecipeApp:
             keep_running = again == "Y"
 
         print("Goodbye!")
-
+# creates a new recipe by taking user input
     def create_recipe(self):
         print("================================")
         title = input("Enter the title of the recipe: ").strip()
@@ -165,7 +191,7 @@ class RecipeApp:
         recipe = Recipe(title, ingredients, cooking_time, method, servings, meal, dietary_tags)
         self.book.add_recipe(recipe)
         print(f"Recipe for '{title}' saved!")
-
+#  search menu to find recipes based on different criteria
     def search_menu(self):
         print("=========================================")
         try:
@@ -189,7 +215,7 @@ class RecipeApp:
             4: 'meal',
             5: 'diet'
         }
-
+        # if user chooses random recipe, find a random recipe if present
         if choice == 0:
             recipe = self.book.get_random_recipe()
             print("Random Recipe:\n", recipe if recipe else "No recipes available.")
@@ -203,6 +229,14 @@ class RecipeApp:
                 print("No matching recipes found.")
         else:
             print("Invalid option")
+# delete menu to remove recipes
+    def delete_recipe_menu(self):
+        print("================================")
+        title = input("Enter the title of the recipe you want to delete: ").strip()
+        if self.book.delete_recipe(title):
+            print(f"Recipe '{title}' has been deleted successfully!")
+        else:
+            print(f"Recipe '{title}' not found.")
 
 
 if __name__ == "__main__":
