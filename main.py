@@ -24,7 +24,7 @@ class Recipe:
         except Exception as e:
             print(f"Error reading {path}: {e}")
             return None
-
+        #Strip the lines and assign to fields based on order from the text file
         title = lines[0].strip()
         ingredients = [i.strip() for i in lines[1].split(',') if i.strip()]
         cooking_time = lines[2].strip()
@@ -37,13 +37,13 @@ class Recipe:
     # String version of Recipe for printing and saving to text file
     def __str__(self):
         return (
-            f"{self.title}\n"
-            f"{', '.join(self.ingredients)}\n"
-            f"{self.cooking_time}\n"
-            f"{'. '.join(self.method)}\n"
-            f"{self.servings}\n"
-            f"{self.meal}\n"
-            f"{', '.join(self.dietary_tags)}\n"
+            f"Title: {self.title}\n"
+            f"Ingredients: {', '.join(self.ingredients)}\n"
+            f"Cooking time: {self.cooking_time}\n"
+            f"Method: {'. '.join(self.method)}\n"
+            f"Servings: {self.servings}\n"
+            f"Meal: {self.meal}\n"
+            f"Dietary tags: {', '.join(self.dietary_tags)}\n"
         )
 class RecipeBook:
     # The collection of recipe objects
@@ -152,9 +152,8 @@ class RecipeBook:
             filename = recipe.filename
         else:
             filename = recipe.title.replace(' ', '_').lower() + '.txt'
-
         file_path = os.path.join(self.folder, filename)
-
+    #Using try-except for error handling during file deletion to prevent crashes
         try:
             if os.path.exists(file_path):
                 os.remove(file_path)
@@ -164,183 +163,101 @@ class RecipeBook:
 
             self.recipes.remove(recipe)
             self._save_to_pickle()
-
             print(f"Recipe '{recipe.title}' deleted successfully.")
-
         except Exception as e:
             print(f"Error deleting recipe: {e}")
+    
+    
     def edit_recipe(self, title):
-
         # Find recipe
-
         matches = self.search_by_field('title', title)
-
         if not matches:
-
             print(f"Error: recipe '{title}' not found.")
-
             return
-
-
-
         recipe = matches[0]
 
-
-
         print(f"\nEditing '{recipe.title}'...")
-
         print("Press Enter to keep the current value.\n")
 
-
-
         # Gather new fields (blank input means keep old)
-
         new_title = input(f"New title [{recipe.title}]: ").strip() or recipe.title
 
-
-
         new_ingredients = input(
-
             f"New ingredients (comma-separated) [{', '.join(recipe.ingredients)}]: "
-
         ).strip()
 
         if new_ingredients:
-
             new_ingredients = [i.strip() for i in new_ingredients.split(',')]
 
         else:
-
             new_ingredients = recipe.ingredients
 
-
-
         new_cooking_time = input(
-
             f"New cooking time [{recipe.cooking_time}]: "
-
         ).strip() or recipe.cooking_time
 
-
-
         new_method = input(
-
             f"New method ('.' separated) [{'. '.join(recipe.method)}]: "
-
         ).strip()
 
         if new_method:
-
             new_method = [s.strip() for s in new_method.split('.') if s.strip()]
 
         else:
-
             new_method = recipe.method
 
-
-
         new_servings = input(
-
             f"New servings [{recipe.servings}]: "
-
         ).strip() or recipe.servings
 
-
-
         new_meal = input(
-
             f"New meal [{recipe.meal}]: "
-
         ).strip() or recipe.meal
-
-
-
         new_dietary = input(
-
             f"New dietary tags (comma-separated) [{', '.join(recipe.dietary_tags)}]: "
-
         ).strip()
-
         if new_dietary:
-
             new_dietary = [t.strip() for t in new_dietary.split(',')]
-
         else:
-
             new_dietary = recipe.dietary_tags
 
-
-
         # Handle filename changes
-
         old_filename = recipe.filename or recipe.title.replace(' ', '_').lower() + ".txt"
-
         old_path = os.path.join(self.folder, old_filename)
 
-
-
         new_filename = new_title.replace(' ', '_').lower() + ".txt"
-
         new_path = os.path.join(self.folder, new_filename)
 
-
-
         # If title changed, rename the file
-
         if new_filename != old_filename:
-
             if os.path.exists(new_path):
-
                 print("Error: A recipe with that title already exists.")
-
                 return
-
             os.rename(old_path, new_path)
 
-
-
         # Update recipe object
-
         recipe.title = new_title
-
         recipe.ingredients = new_ingredients
-
         recipe.cooking_time = new_cooking_time
-
         recipe.method = new_method
-
         recipe.servings = new_servings
-
         recipe.meal = new_meal
-
         recipe.dietary_tags = new_dietary
-
         recipe.filename = new_filename
 
-
-
         # Save updated recipe to the text file
-
         try:
-
             with open(new_path, 'w', encoding='utf-8') as f:
-
                 f.write(str(recipe))
-
         except Exception as e:
-
             print(f"Error writing recipe file: {e}")
-
             return
-
-
 
         self._save_to_pickle()
 
         print(f"Recipe '{new_title}' updated successfully.")
         print(recipe)
    
-
 class RecipeApp:
     def __init__(self):
         self.book = RecipeBook()
@@ -423,10 +340,11 @@ class RecipeApp:
         self.book.add_recipe(recipe)
 
         print(f"Your recipe for'{title}' has been saved!.")
-
+        print(recipe)
 
     def search_menu(self):
         print("\n--- Search Recipes ---")
+        #fields is a list of tuples containing field keys and their display names
         fields = [
             ('title', 'Title'),
             ('ingredient', 'Ingredient'),
